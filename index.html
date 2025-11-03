@@ -752,6 +752,41 @@ scan 'student'
 get 'student', '101'
 
 
+>> ex 5:
+```
+// ==============================================================================
+// 1. APRIORI ALGORITHM (KnowledgeFlow)
+// ==============================================================================
+1. Open WEKA and select the **KnowledgeFlow** environment.
+2. Drag **ArffLoader** from DataSources and load the `supermarket.arff` dataset.
+3. Connect the dataset to **ClassAssigner** (Filters) and set the class attribute to **last**.
+4. Connect the ClassAssigner output to **CrossValidationFoldMaker** (Evaluation).
+5. Connect the `trainingSet` output of the FoldMaker to the **Apriori** component (Associations).
+6. Connect the `text` output of Apriori to **TextViewer** (Visualization) and **Run** the flow to view the association rules.
+
+// ==============================================================================
+// 2. J48 ALGORITHM (KnowledgeFlow)
+// ==============================================================================
+1. Load the dataset (e.g., Iris) using the **ArffLoader** component.
+2. Use the **ClassAssigner** to set the class label to the **last attribute** (`-C last`).
+3. Apply the **CrossValidationFoldMaker** to prepare the data for training/testing.
+4. Build the decision tree classifier using the **J48** algorithm. Set parameters: **-C 0.25 -M 2** (Confidence factor and minimum instances per leaf).
+5. Connect the J48 output to the **ClassifierPerformanceEvaluator** to compute metrics.
+6. Connect the Evaluator output to **TextViewer** to display the detailed performance results and confusion matrix.
+
+>> arffloader,classAssigner, crossvalidationmodal, j48, classfierperfomanceevaluvator,textviewer, attributesummarizer, data visualizer, graphviewer, modelperfomancechart.
+
+// ==============================================================================
+// 3. FP-GROWTH ALGORITHM (Explorer)
+// ==============================================================================
+1. Open the Weka **Explorer** interface.
+2. In the **Preprocess** tab, click **Open file** and load the `supermarket` ARFF dataset.
+3. Navigate to the **Associate** tab.
+4. Click **Choose** and select the **FPGrowth** algorithm.
+5. **Set parameters**: Enter the values `-P 2 -I 1 -N 10 -T 0 -C 0.9 -D 0.05 -U 1.0 -M 0.1`.
+6. Click the **Start** button to run the FP-Growth algorithm.
+7. **View the generated rules** and metrics in the "Associator output" panel.
+```
 
 
     </pre>
