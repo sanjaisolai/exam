@@ -740,7 +740,7 @@ val textFile = sc.textFile("hdfs:///user/it22a38/input.txt")
 val words = textFile.flatMap(line => line.split("\\s+"))
 val wordPairs = words.map(word => (word, 1))
 val wordCounts = wordPairs.reduceByKey(_ + _)
-wordCounts.collect().foreach(println)
+wordCounts.collect().foreach{ case (word, count) => println(s"$word: $count") }
 wordCounts.saveAsTextFile("hdfs:///user/devi/output_wordcount")
 
 >> ex 12 hbase:
