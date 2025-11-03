@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <pre>
+>>ex1:
+
+import pandas as pd
+import numpy as np
+from faker import Faker
+
+fake = Faker()
+num_rows = 100
+
+# CSV: Employee Dataset
+data = {
+    'ID': np.arange(1, num_rows + 1),
+    'Name': [fake.name() for _ in range(num_rows)],
+    'Age': np.random.randint(25, 65, num_rows),
+    'Salary': np.random.randint(30000, 1000000, num_rows),
+    'Dept': np.random.choice(['HR', 'IT', 'Finance', 'Marketing', 'Sales'], num_rows),
+    'Rating': np.round(np.random.uniform(1.0, 5.0, num_rows), 1),
+    'Gender': np.random.choice(['Male', 'Female'], num_rows),
+    'Experience': np.random.randint(1, 25, num_rows),
+    'City': np.random.choice(['Chennai', 'Bangalore', 'Hyderabad', 'Pune'], num_rows),
+    'Year': np.random.randint(2000, 2025, num_rows)
+}
+df = pd.DataFrame(data)
+df.to_csv('Employee.csv', index=False)
+
+# JSON: Social Media Dataset
+data = {
+    'User_ID': np.arange(1, num_rows + 1),
+    'Name': [fake.name() for _ in range(num_rows)],
+    'Email': [fake.email() for _ in range(num_rows)],
+    'SignUp Date': [fake.date() for _ in range(num_rows)],
+    'isActive': np.random.choice(['True', 'False'], num_rows),
+    'LoginCount': np.random.randint(1, 5, num_rows),
+    'Country': [fake.country() for _ in range(num_rows)],
+    'Subscription Type': np.random.choice(['Free', 'Basic', 'Premium', 'Enterprise'], num_rows),
+    'Rating': np.round(np.random.uniform(1.0, 5.0, num_rows), 1),
+    'LastLoginTime': [fake.time() for _ in range(num_rows)]
+}
+df = pd.DataFrame(data)
+df.to_json('Social Media.json', index=False)
+
+# XML: Customer Purchases Dataset
+Devices = {
+    'DeviceID': np.arange(1, num_rows + 1),
+    'DeviceName': np.random.choice(['Asus', 'Dell', 'Hp'], num_rows),
+    'IPaddress': [fake.ipv4_private() for _ in range(num_rows)],
+    'OS': np.random.choice(['Linux', 'Windows', 'Unix'], num_rows),
+    'Osversion': np.random.randint(1, 5, num_rows),
+    'PurchaseDate': [fake.date() for _ in range(num_rows)],
+    'WarrantyStatus': np.random.choice(['Valid', 'Invalid'], num_rows),
+    'isOnline': np.random.choice(['True', 'False'], num_rows),
+    'BatteryHealth': np.random.choice(['Good', 'Bad'], num_rows)
+}
+df = pd.DataFrame(Devices)
+df.to_xml('Device.xml', root_name="Devices", row_name="Device")
+
+commands:
+pip install pandas numpy faker
+
+>> ex2:
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, LabelEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+df = pd.read_csv('combined_preprocessing_dataset.csv')
+
+# Fill missing values
+df['Age'].fillna(df['Age'].mean(), inplace=True)
+df['Salary'].fillna(df['Salary'].mean(), inplace=True)
+df['Income'].fillna(df['Income'].mean(), inplace=True)
+df['Department'].fillna(df['Department'].mode()[0], inplace=True)
+df['Membership'].fillna(df['Membership'].mode()[0], inplace=True)
+
+# Encoding
+df['Gender_encoded'] = LabelEncoder().fit_transform(df['Gender'])
+city_encoded = pd.get_dummies(df['City'], prefix='City')
+df = pd.concat([df, city_encoded], axis=1)
+
+# Scaling
+cols = ['Income', 'LoanAmount', 'Age']
+df_scaled_std = pd.DataFrame(StandardScaler().fit_transform(df[cols]), columns=cols)
+df_scaled_minmax = pd.DataFrame(MinMaxScaler().fit_transform(df[cols]), columns=cols)
+
+# Outlier removal using IQR
+Q1 = df['LoanAmount'].quantile(0.25)
+Q3 = df['LoanAmount'].quantile(0.75)
+IQR = Q3 - Q1
+df_filtered = df[(df['LoanAmount'] >= Q1 - 1.5 * IQR) & (df['LoanAmount'] <= Q3 + 1.5 * IQR)]
+
+# Transformation
+df['Income_log'] = np.log(df['Income'] + 1)
+df['LoanAmount_log'] = np.log(df['LoanAmount'] + 1)
+df['CreditScore_scaled'] = RobustScaler().fit_transform(df[['CreditScore']])
+
+# Correlation
+corr = df[['Advertising', 'Price', 'Discount', 'Sales']].corr()
+top_features = corr['Sales'].abs().sort_values(ascending=False).head(2)
+
+# Pipeline
+numeric_features = ['Age', 'Income']
+categorical_features = ['Gender', 'City']
+
+numeric_transformer = Pipeline(steps=[
+    ('imputer', SimpleImputer(strategy='mean')),
+    ('scaler', StandardScaler())
+])
+
+categorical_transformer = Pipeline(steps=[
+    ('encoder', OneHotEncoder(handle_unknown='ignore'))
+])
+
+preprocessor = ColumnTransformer(transformers=[
+    ('num', numeric_transformer, numeric_features),
+    ('cat', categorical_transformer, categorical_features)
+])
+
+processed_data = preprocessor.fit_transform(df)
+
+commands:
+pip install pandas scikit-learn numpy
+
+
+>>ex 3:
+
+>>>1st chart(bar chart):
+
+import requests, re, nltk, matplotlib.pyplot as plt
+from bs4 import BeautifulSoup
+from collections import Counter
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+
+url = 'https://www.bbc.com/news'
+headers = {'User-Agent': 'Mozilla/5.0'}
+response = requests.get(url, headers=headers)
+soup = BeautifulSoup(response.content, 'html.parser')
+
+headlines = []
+for tag in soup.find_all(['h2', 'h3']):
+    text = tag.get_text(strip=True)
+    if text and text not in headlines:
+        headlines.append(text)
+    if len(headlines) >= 5:
+        break
+
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'[^a-z\s]', '', text)
+    words = text.split()
+    words = [word for word in words if word not in stopwords.words('english')]
+    return ' '.join(words)
+
+all_words = []
+for h in headlines:
+    all_words.extend(clean_text(h).split())
+
+word_counts = Counter(all_words)
+top_10 = word_counts.most_common(10)
+
+words, counts = zip(*top_10)
+plt.bar(words, counts, color='skyblue')
+plt.title('Top 10 Most Frequent Words')
+plt.xlabel('Words')
+plt.ylabel('Frequency')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+
+>>>2nd part(random chart):
+
+import matplotlib.pyplot as plt
+import numpy as np
+    if raw_text:
+        words = clean_text(raw_text)
+        all_words.extend(words)
+    if len(all_words) >= 1000:
+        break
+wordcounts = Counter(all_words)
+words_freq_sorted = [w for w, f in wordcounts.most_common()]
+scale = 50 / wordcounts[words_freq_sorted[0]]
+plt.figure(figsize=(12, 8))
+plt.axes(xlim=(0, 100), ylim=(0, 100))
+N = min(len(words_freq_sorted), 50)
+colors = ["r", "g", "b", "m", "c", "k"]
+for i in range(N):
+    x = np.random.uniform(0, 90)
+    y = np.random.uniform(0, 90)
+    freq = wordcounts[words_freq_sorted[i]]
+    col = colors[i % len(colors)]
+    plt.text(x, y, words_freq_sorted[i], fontsize=scale * freq, color=col)
+plt.axis('off')
+plt.show()
+
+
+commands:
+pip install requests beautifulsoup4 nltk matplotlib
+
+>> ex 4:
+
+# ==============================================================================
+# Setup and Data Loading
+# ==============================================================================
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.decomposition import PCA
+from sklearn.datasets import load_wine
+from pandas.plotting import parallel_coordinates
+from sklearn.preprocessing import StandardScaler
+
+# Load Datasets
+# Iris dataset is loaded within the first snippet for continuity
+# titanic = sns.load_dataset('titanic') # Loaded in its section
+# wine = load_wine() # Loaded in its section
+
+
+# ==============================================================================
+# IRIS DATASET – 1D Visualizations
+# ==============================================================================
+
+# 1. Histogram for Sepal Length [cite: 26, 27]
+iris = sns.load_dataset('iris')
+
+plt.figure(figsize=(8, 5))
+sns.histplot(iris['sepal_length'], bins=20, kde=True, color='skyblue')
+plt.title('Histogram of Sepal Length')
+plt.xlabel('Sepal Length (cm)')
+plt.ylabel('Frequency')
+plt.show()
+
+# 2. Box Plot for Petal Width by Species [cite: 30]
+plt.figure(figsize=(6, 5))
+sns.boxplot(x='species', y='petal_width', data=iris, palette='pastel')
+plt.title('Boxplot of Petal Width by Species')
+plt.xlabel('Species')
+plt.ylabel('Petal Width (cm)')
+plt.show()
+
+# 3. Violin Plot for Petal Length by Species [cite: 33]
+plt.figure(figsize=(8, 6))
+sns.violinplot(x='species', y='petal_length', data=iris, palette='pastel')
+plt.title('Violin Plot of Petal Length by Species')
+plt.xlabel('Species')
+plt.ylabel('Petal Length (cm)')
+plt.show()
+
+# ==============================================================================
+# IRIS DATASET – 2D Visualizations
+# ==============================================================================
+
+# 4. Scatter Plot of Sepal Length vs Sepal Width [cite: 37]
+plt.figure(figsize=(8, 6))
+sns.scatterplot(data=iris, x='sepal_length', y='sepal_width', hue='species', palette='Set1')
+plt.title('Sepal Length vs Sepal Width (by Species)')
+plt.xlabel('Sepal Length (cm)')
+plt.ylabel('Sepal Width (cm)')
+plt.show()
+
+# 5. Pair Plot (Scatter Matrix) [cite: 41]
+sns.pairplot(iris, hue='species', palette='husl')
+plt.suptitle('Pair Plot of Iris Dataset', y=1.02)
+plt.show()
+
+# 6. Correlation Matrix Heatmap [cite: 44]
+plt.figure(figsize=(8, 6))
+corr_matrix = iris.drop(columns='species').corr()
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', linewidths=0.5)
+plt.title('Correlation Matrix Heatmap')
+plt.show()
+
+# ==============================================================================
+# IRIS DATASET – 3D Visualization
+# ==============================================================================
+
+# 7. 3D Scatter Plot: Sepal Length, Sepal Width, Petal Length [cite: 48]
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
+
+# Manually defining species and a palette for the loop (not in original snippet, but required for execution)
+species = iris['species'].unique()
+palette = {'setosa': 'red', 'versicolor': 'blue', 'virginica': 'green'}
+
+for sp in species:
+    subset = iris[iris['species'] == sp]
+    ax.scatter(
+        subset['sepal_length'],
+        subset['sepal_width'],
+        subset['petal_length'],
+        color=palette[sp],
+        label=sp,
+        s=60, alpha=0.7
+    )
+
+ax.set_xlim(4, 8)
+ax.set_ylim(2, 4.5)
+ax.set_zlim(1, 7)
+ax.view_init(elev=10, azim=120)
+ax.set_xlabel('Sepal Length (cm)')
+ax.set_ylabel('Sepal Width (cm)')
+ax.set_zlabel('Petal Length (cm)')
+ax.set_title('3D Scatter Plot: Sepal Length vs Sepal Width vs Petal Length')
+plt.legend()
+plt.show()
+
+
+# ==============================================================================
+# TITANIC DATASET
+# ==============================================================================
+
+# Load Titanic Dataset
+titanic = sns.load_dataset('titanic')
+
+# 8. Count Plot for Survival Distribution [cite: 51]
+plt.figure(figsize=(7, 5))
+sns.countplot(x='survived', data=titanic, palette=['salmon', 'mediumseagreen'])
+plt.title('Survival Distribution (0=Not Survived, 1=Survived)', fontsize=14, weight='bold')
+plt.xlabel('Survived')
+plt.ylabel('Count')
+plt.show()
+
+# 9. KDE Plot for Fare Distribution [cite: 56]
+plt.figure(figsize=(7, 5))
+sns.kdeplot(
+    data=titanic, x='fare', fill=True, color='mediumslateblue', alpha=0.6, linewidth=2
+)
+plt.title('Fare Distribution', fontsize=14, weight='bold')
+plt.xlabel('Fare')
+plt.ylabel('Density')
+plt.show()
+
+# 10. Correlation Heatmap of Numerical Features [cite: 59]
+numerical_features = titanic.select_dtypes(include=['float64', 'int64'])
+plt.figure(figsize=(8, 6))
+sns.heatmap(numerical_features.corr(), annot=True, cmap='coolwarm', linewidths=0.5)
+plt.title('Correlation Heatmap (Numerical Features)')
+plt.show()
+
+# 11. 3D Scatter Plot: Fare, Age, Pclass (by Survived) [cite: 62]
+df_3d = titanic[['fare', 'age', 'pclass', 'survived']].dropna()
+
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
+
+colors = {0: 'crimson', 1: 'mediumseagreen'}
+markers = {0: 'o', 1: '^'}
+
+for label in [0, 1]:
+    subset = df_3d[df_3d['survived'] == label]
+    ax.scatter(
+        subset['fare'],
+        subset['age'],
+        subset['pclass'],
+        color=colors[label],
+        label=f'Survived={label}',
+        s=60,
+        alpha=0.7,
+        marker=markers[label],
+        edgecolor='k'
+    )
+
+ax.set_xlabel('Fare')
+ax.set_ylabel('Age')
+ax.set_zlabel('Pclass')
+ax.set_title('3D Scatter Plot: Fare, Age, Pclass (by Survived)', fontsize=14, weight='bold')
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+# 12. 3D PCA Plot (Fare, Age, Pclass) [cite: 64]
+features = df_3d[['fare', 'age', 'pclass']]
+scaled_features = StandardScaler().fit_transform(features)
+pca = PCA(n_components=3)
+pca_result = pca.fit_transform(scaled_features)
+pca_df = pd.DataFrame(data=pca_result, columns=['PC1', 'PC2', 'PC3'])
+pca_df['survived'] = df_3d['survived'].values
+
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
+for label in [0, 1]:
+    subset = pca_df[pca_df['survived'] == label]
+    ax.scatter(
+        subset['PC1'],
+        subset['PC2'],
+        subset['PC3'],
+        color=colors[label],
+        label=f'Survived={label}',
+        s=60,
+        alpha=0.7,
+        marker=markers[label],
+        edgecolor='k'
+    )
+
+ax.set_xlabel('PC1')
+ax.set_ylabel('PC2')
+ax.set_zlabel('PC3')
+ax.set_title('3D PCA Plot (Fare, Age, Pclass)', fontsize=14, weight='bold')
+ax.legend()
+plt.tight_layout()
+plt.show()
+
+
+# ==============================================================================
+# WINE DATASET
+# ==============================================================================
+
+# Load Wine Dataset
+wine = load_wine()
+df = pd.DataFrame(wine.data, columns=wine.feature_names)
+df['target'] = wine.target
+sns.set(style='whitegrid', font_scale=1.1, palette='pastel') # Apply consistent style
+
+# 13. Scatter plot of Alcohol vs Color Intensity [cite: 67]
+plt.figure(figsize=(8,6))
+sns.scatterplot(
+    x='alcohol',
+    y='color_intensity',
+    hue='target',
+    data=df,
+    palette='Set1',
+    s=70, alpha=0.8, edgecolor='k'
+)
+plt.title('Alcohol vs Color Intensity by Wine Class', fontsize=14, weight='bold')
+plt.xlabel('Alcohol')
+plt.ylabel('Color Intensity')
+plt.legend(title='Wine Class')
+plt.tight_layout()
+plt.show()
+
+# 14. Parallel Coordinates Plot [cite: 69]
+plt.figure(figsize=(20,10))
+parallel_coordinates(
+    df, 'target',
+    color=sns.color_palette('Set1', n_colors=3),
+    alpha=0.6
+)
+plt.title('Parallel Coordinates Plot by Wine Class', fontsize=8, weight='bold')
+plt.ylabel('Feature Value (Standardized Scale)')
+plt.tight_layout()
+plt.grid()
+plt.show()
+
+# 15. Radar Chart of Average Feature Values per Class [cite: 71]
+mean_df = df.groupby('target').mean()
+# Min-Max Normalization
+normalized_df = (mean_df - mean_df.min()) / (mean_df.max() - mean_df.min())
+
+labels = wine.feature_names
+num_vars = len(labels)
+angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+angles += angles[:1]
+fig, ax = plt.subplots(figsize=(8,8), subplot_kw=dict(polar=True))
+colors = sns.color_palette('Set1', n_colors=3)
+for idx, (index, row) in enumerate(normalized_df.iterrows()):
+    values = row.tolist()
+    values += values[:1]
+    ax.plot(angles, values, label=f'Class {index}', color=colors[idx], linewidth=2)
+    ax.fill(angles, values, color=colors[idx], alpha=0.25)
+    
+ax.set_xticks(angles[:-1])
+ax.set_xticklabels(labels, fontsize=10)
+ax.set_yticklabels([])
+ax.set_title('Radar Chart: Average Feature Values by Wine Class', fontsize=14, weight='bold')
+ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
+plt.tight_layout()
+plt.show()
+
+commands:
+pip install seaborn matplotlib plotly scikit-learn pandas
+
+>>ex 7:
+
+>>>Mapper:
+
+import java.io.IOException;
+import java.util.StringTokenizer;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.Mapper;
+
+public class WordCountMapper extends Mapper<Object, Text, Text, IntWritable> {
+    private final static IntWritable one = new IntWritable(1);
+    private Text word = new Text();
+
+    public void map(Object key, Text value, Context context)
+            throws IOException, InterruptedException {
+        StringTokenizer itr = new StringTokenizer(value.toString());
+        while (itr.hasMoreTokens()) {
+            word.set(itr.nextToken().toLowerCase());
+            context.write(word, one);
+        }
+    }
+}
+
+
+>>>Reducer:
+
+import java.io.IOException;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class WordCountReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+    public void reduce(Text key, Iterable<IntWritable> values, Context context)
+            throws IOException, InterruptedException {
+        int sum = 0;
+        for (IntWritable val : values) sum += val.get();
+        context.write(key, new IntWritable(sum));
+    }
+}
+
+>>>job:
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class WordCountDriver {
+    public static void main(String[] args) throws Exception {
+        Job job = Job.getInstance(new Configuration(), "WordCount");
+        job.setJarByClass(WordCountDriver.class);
+        job.setMapperClass(WordCountMapper.class);
+        job.setReducerClass(WordCountReducer.class);
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+        FileInputFormat.addInputPath(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+commands:
+
+# 1. Go to your project folder
+cd WordCount
+
+# 2. Make a folder for compiled files
+mkdir -p classes
+
+# 3. Compile all Java files
+javac -classpath `hadoop classpath` -d classes WordCountMapper.java WordCountReducer.java WordCountDriver.java
+
+# 4. Create a JAR
+jar -cvf wordcount.jar -C classes/ .
+
+# 5. Create input folder and upload file
+hdfs dfs -mkdir -p /user/it22a/input
+echo "Hadoop is easy Hadoop is powerful Hadoop MapReduce" > input.txt
+hdfs dfs -put input.txt /user/it22a/input
+
+# 6. Run MapReduce job
+hadoop jar wordcount.jar WordCountDriver /user/it22a/input /user/it22a/output
+
+# 7. View output
+hdfs dfs -cat /user/it22a/output/part-r-00000
+
+
+>>ex 8:
+
+// CreateHDFSFile.java
+import java.io.OutputStream;
+import java.io.IOException;
+import java.net.URI;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FSDataOutputStream;
+public class CreateHDFSFile {
+public static void main(String[] args) {
+ try {
+ String hdfsUri = "hdfs://quickstart.cloudera:8020";
+ String filePath = "/user/it22a38/sample1.txt";
+ Configuration conf = new Configuration();
+ conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
+ conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
+ FileSystem fs = FileSystem.get(new URI(hdfsUri), conf);
+ Path path = new Path(filePath);
+ FSDataOutputStream os = fs.create(path, true);
+ String content = "Hello, this is a test file in HDFS.\n";
+ os.writeBytes(content);
+ os.close();
+ System.out.println(" File created successfully in HDFS at: " + filePath);
+ fs.close();
+ } catch (IOException e) {
+ e.printStackTrace();
+ } catch (Exception e) {
+ e.printStackTrace();
+ }
+ }
+}
+
+// ReadHDFSFile.java
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URI;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
+public class ReadHDFSFile {
+public static void main(String[] args) {
+ try {
+ Configuration conf = new Configuration();
+ conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
+ conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
+ FileSystem fs = FileSystem.get(conf);
+ String filePath = "/user/devi/sample.txt";
+ Path path = new Path(filePath);
+ FSDataInputStream inputStream = fs.open(path);
+ BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+ String line;
+ System.out.println("Contents of HDFS file " + filePath + ":");
+ while ((line = reader.readLine()) != null) {
+ System.out.println(line);
+ }
+ reader.close();
+ fs.close();
+ } catch (Exception e) {
+ e.printStackTrace();
+ }
+ }
+}
+
+// AppendHDFSFile.java
+import java.io.OutputStreamWriter;
+import java.io.BufferedWriter;
+import java.net.URI;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+public class AppendHDFSFile {
+public static void main(String[] args) {
+ try {
+ Configuration conf = new Configuration();
+ conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
+ conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
+ FileSystem fs = FileSystem.get(conf);
+ String filePath = "/user/devi/sample.txt";
+ Path path = new Path(filePath);
+ if (fs.exists(path)) {
+ FSDataOutputStream out = fs.append(path);
+ BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
+ writer.write("This is appended text.\n");
+ writer.close();
+ System.out.println("Successfully appended to file: " + filePath);
+ } else {
+ System.out.println("File does not exist: " + filePath);
+ }
+ fs.close();
+ } catch (Exception e) {
+ e.printStackTrace();
+ }
+ }
+}
+
+commands:
+
+javac -classpath `hadoop classpath` filename.java
+java -cp `hadoop classpath`:. filename
+
+>>ex 9:
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+
+public class HDFSNodeInfo {
+    public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
+        conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
+        conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
+        FileSystem fs = FileSystem.get(conf);
+        if (fs instanceof DistributedFileSystem) {
+            DistributedFileSystem dfs = (DistributedFileSystem) fs;
+            System.out.println("NameNode URI: " + dfs.getUri());
+            System.out.println("DFS Capacity: " + fs.getStatus().getCapacity());
+            System.out.println("DFS Used: " + fs.getStatus().getUsed());
+            System.out.println("DFS Remaining: " + fs.getStatus().getRemaining());
+        }
+        fs.close();
+    }
+}
+
+commands:
+javac -classpath `hadoop classpath` HDFSNodeInfo.java
+java -cp `hadoop classpath`:. HDFSNodeInfo
+
+>>ex10:
+
+pig commands:
+
+raw = LOAD '/user/it22a54/data/events.csv' USING PigStorage(',') AS (
+    user_id:chararray, event_type:chararray, ts:chararray, product_id:chararray, price:double
+);
+Purchases = FILTER raw BY event_type == 'purchase';
+User_group = GROUP Purchases BY user_id;
+User_spend = FOREACH User_group GENERATE
+    group AS user_id,
+    COUNT(Purchases) AS total_purchases,
+    SUM(Purchases.price) AS total_spend;
+STORE User_spend INTO '/user/it22a54/output_pig' USING PigStorage('\t'); 
+
+Hive:
+
+CREATE EXTERNAL TABLE IF NOT EXISTS events(
+user_id STRING, event_type STRING, ts STRING, product_id STRING, price DOUBLE
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/it22a38/data1/';
+
+CREATE TABLE user_spend AS
+SELECT user_id, COUNT(*) AS total_purchases, SUM(price) AS total_spend
+FROM events
+WHERE event_type='purchase'
+GROUP BY user_id;
+
+SELECT * FROM user_spend;
+
+>> ex 11 spark:
+
+spark-shell --master local[*]
+val textFile = sc.textFile("hdfs:///user/it22a38/input.txt")
+val words = textFile.flatMap(line => line.split("\\s+"))
+val wordPairs = words.map(word => (word, 1))
+val wordCounts = wordPairs.reduceByKey(_ + _)
+wordCounts.collect().foreach(println)
+wordCounts.saveAsTextFile("hdfs:///user/devi/output_wordcount")
+
+>> ex 12 hbase:
+
+hbase shell
+create 'student', 'info'
+put 'student', '101', 'info:name', 'Anu'
+scan 'student'
+get 'student', '101'
+
+
+
+
+    </pre>
+</body>
+</html>
