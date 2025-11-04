@@ -488,61 +488,90 @@ pip install seaborn matplotlib plotly scikit-learn pandas
 
 import java.io.IOException;
 import java.util.StringTokenizer;
-import org.apache.hadoop.io.*;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
 public class WordCountMapper extends Mapper<Object, Text, Text, IntWritable> {
     private final static IntWritable one = new IntWritable(1);
     private Text word = new Text();
 
-    public void map(Object key, Text value, Context context)
-            throws IOException, InterruptedException {
+    @Override
+    protected void map(Object key, Text value, Context context) throws IOException, InterruptedException {
         StringTokenizer itr = new StringTokenizer(value.toString());
+
         while (itr.hasMoreTokens()) {
-            word.set(itr.nextToken().toLowerCase());
-            context.write(word, one);
+            String token = itr.nextToken().replaceAll("[^A-Za-z0-9']", "").toLowerCase();
+            if (!token.isEmpty()) {
+                word.set(token);
+                context.write(word, one);
+            }
         }
     }
 }
 
 
+
 >>>Reducer:
 
 import java.io.IOException;
-import org.apache.hadoop.io.*;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Reducer;
 
 public class WordCountReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-    public void reduce(Text key, Iterable<IntWritable> values, Context context)
+    private IntWritable result = new IntWritable();
+
+    @Override
+    protected void reduce(Text key, Iterable<IntWritable> values, Context context)
             throws IOException, InterruptedException {
         int sum = 0;
-        for (IntWritable val : values) sum += val.get();
-        context.write(key, new IntWritable(sum));
+        for (IntWritable val : values) {
+            sum += val.get();
+        }
+        result.set(sum);
+        context.write(key, result);
     }
 }
+
 
 >>>job:
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class WordCountDriver {
     public static void main(String[] args) throws Exception {
-        Job job = Job.getInstance(new Configuration(), "WordCount");
+        if (args.length != 2) {
+            System.err.println("Usage: WordCountDriver <input path> <output path>");
+            System.exit(-1);
+        }
+
+        Configuration conf = new Configuration();
+        Job job = Job.getInstance(conf, "Word Count");
+
         job.setJarByClass(WordCountDriver.class);
         job.setMapperClass(WordCountMapper.class);
+        job.setCombinerClass(WordCountReducer.class);
         job.setReducerClass(WordCountReducer.class);
+
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
+
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
+
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
 }
+
 
 commands:
 
@@ -573,101 +602,124 @@ hdfs dfs -cat /user/it22a/output/part-r-00000
 >>ex 8:
 
 // CreateHDFSFile.java
-import java.io.OutputStream;
 import java.io.IOException;
 import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+
 public class CreateHDFSFile {
-public static void main(String[] args) {
- try {
- String hdfsUri = "hdfs://quickstart.cloudera:8020";
- String filePath = "/user/it22a38/sample1.txt";
- Configuration conf = new Configuration();
- conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
- conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
- FileSystem fs = FileSystem.get(new URI(hdfsUri), conf);
- Path path = new Path(filePath);
- FSDataOutputStream os = fs.create(path, true);
- String content = "Hello, this is a test file in HDFS.\n";
- os.writeBytes(content);
- os.close();
- System.out.println(" File created successfully in HDFS at: " + filePath);
- fs.close();
- } catch (IOException e) {
- e.printStackTrace();
- } catch (Exception e) {
- e.printStackTrace();
- }
- }
+    public static void main(String[] args) {
+        try {
+            String hdfsUri = "hdfs://quickstart.cloudera:8020";
+            String filePath = "/user/it22a38/sample1.txt";
+
+            Configuration conf = new Configuration();
+            conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
+            conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
+
+            FileSystem fs = FileSystem.get(new URI(hdfsUri), conf);
+            Path path = new Path(filePath);
+            FSDataOutputStream os = fs.create(path, true);
+
+            String content = "Hello, this is a test file in HDFS.\n";
+            os.writeBytes(content);
+            os.close();
+
+            System.out.println("File created successfully in HDFS at: " + filePath);
+
+            fs.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
+
 
 // ReadHDFSFile.java
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+
 public class ReadHDFSFile {
-public static void main(String[] args) {
- try {
- Configuration conf = new Configuration();
- conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
- conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
- FileSystem fs = FileSystem.get(conf);
- String filePath = "/user/devi/sample.txt";
- Path path = new Path(filePath);
- FSDataInputStream inputStream = fs.open(path);
- BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
- String line;
- System.out.println("Contents of HDFS file " + filePath + ":");
- while ((line = reader.readLine()) != null) {
- System.out.println(line);
- }
- reader.close();
- fs.close();
- } catch (Exception e) {
- e.printStackTrace();
- }
- }
+    public static void main(String[] args) {
+        try {
+            Configuration conf = new Configuration();
+            conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
+            conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
+
+            FileSystem fs = FileSystem.get(conf);
+
+            String filePath = "/user/devi/sample.txt";
+            Path path = new Path(filePath);
+
+            FSDataInputStream inputStream = fs.open(path);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+            String line;
+            System.out.println("Contents of HDFS file " + filePath + ":");
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+
+            reader.close();
+            fs.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
+
 
 // AppendHDFSFile.java
 import java.io.OutputStreamWriter;
 import java.io.BufferedWriter;
 import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+
 public class AppendHDFSFile {
-public static void main(String[] args) {
- try {
- Configuration conf = new Configuration();
- conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
- conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
- FileSystem fs = FileSystem.get(conf);
- String filePath = "/user/devi/sample.txt";
- Path path = new Path(filePath);
- if (fs.exists(path)) {
- FSDataOutputStream out = fs.append(path);
- BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
- writer.write("This is appended text.\n");
- writer.close();
- System.out.println("Successfully appended to file: " + filePath);
- } else {
- System.out.println("File does not exist: " + filePath);
- }
- fs.close();
- } catch (Exception e) {
- e.printStackTrace();
- }
- }
+    public static void main(String[] args) {
+        try {
+            Configuration conf = new Configuration();
+            conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
+            conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
+
+            FileSystem fs = FileSystem.get(conf);
+
+            String filePath = "/user/devi/sample.txt";
+            Path path = new Path(filePath);
+
+            if (fs.exists(path)) {
+                FSDataOutputStream out = fs.append(path);
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
+                writer.write("This is appended text.\n");
+                writer.close();
+
+                System.out.println("Successfully appended to file: " + filePath);
+            } else {
+                System.out.println("File does not exist: " + filePath);
+            }
+
+            fs.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
+
 
 commands:
 
@@ -679,23 +731,48 @@ java -cp `hadoop classpath`:. filename
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import java.net.URI;
 
 public class HDFSNodeInfo {
-    public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        conf.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
-        conf.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
-        FileSystem fs = FileSystem.get(conf);
-        if (fs instanceof DistributedFileSystem) {
-            DistributedFileSystem dfs = (DistributedFileSystem) fs;
-            System.out.println("NameNode URI: " + dfs.getUri());
-            System.out.println("DFS Capacity: " + fs.getStatus().getCapacity());
-            System.out.println("DFS Used: " + fs.getStatus().getUsed());
-            System.out.println("DFS Remaining: " + fs.getStatus().getRemaining());
+    public static void main(String[] args) {
+        try {
+            Configuration conf = new Configuration();
+            conf.addResource(new org.apache.hadoop.fs.Path("/etc/hadoop/conf/core-site.xml"));
+            conf.addResource(new org.apache.hadoop.fs.Path("/etc/hadoop/conf/hdfs-site.xml"));
+
+            FileSystem fs = FileSystem.get(conf);
+
+            if (fs instanceof DistributedFileSystem) {
+                DistributedFileSystem dfs = (DistributedFileSystem) fs;
+
+                System.out.println("NameNode URI: " + dfs.getUri());
+                System.out.println("DFS Capacity: " + fs.getStatus().getCapacity());
+                System.out.println("DFS Used: " + fs.getStatus().getUsed());
+                System.out.println("DFS Remaining: " + fs.getStatus().getRemaining());
+
+                // Optional: List DataNodes
+                System.out.println("\nList of DataNodes:");
+                DatanodeInfo[] dataNodeStats = dfs.getDataNodeStats();
+                for (DatanodeInfo dn : dataNodeStats) {
+                    System.out.println(" - Hostname: " + dn.getHostName());
+                    System.out.println("   IP Address: " + dn.getIpAddr());
+                    System.out.println("   Capacity: " + dn.getCapacity());
+                    System.out.println("   DFS Used: " + dn.getDfsUsed());
+                    System.out.println("   Remaining: " + dn.getRemaining());
+                    System.out.println();
+                }
+            } else {
+                System.out.println("FileSystem is not a DistributedFileSystem.");
+            }
+
+            fs.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        fs.close();
     }
 }
+
 
 commands:
 javac -classpath `hadoop classpath` HDFSNodeInfo.java
